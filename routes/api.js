@@ -18,22 +18,23 @@ module.exports = function (app) {
   
     .get(async function (req, res) {
       let project = req.params.project;
-      let filter = req.query; // Filters based on query parameters
+      let filter = { project, ...req.query }; // Ajoute les filtres
       try {
-        const issues = await Issue.find({ project, ...filter });
-        res.json(issues);
+        const issues = await Issue.find(filter);
+        res.json(issues); // Renvoie les issues filtrées
       } catch (err) {
         res.status(500).send(err);
       }
     })
+  
     
     .post(async function (req, res) {
       try {
         const { issue_title, issue_text, created_by, assigned_to, status_text, project } = req.body;
     
         if (!issue_title || !issue_text || !created_by) {
-          return res.status(400).send({ error: 'required field(s) missing' });
-        }
+          return res.json({ error: 'required field(s) missing' });
+        }        
     
         const newIssue = new Issue({
           issue_title,
@@ -58,7 +59,7 @@ module.exports = function (app) {
     
       // Vérification de l'absence de l'_id
       if (!_id) {
-        return res.status(400).send('missing _id');
+        return res.json({ error: 'missing _id' });
       }
     
       // Vérification de la validité de l'_id
@@ -68,19 +69,22 @@ module.exports = function (app) {
     
       // Vérification s'il y a des champs à mettre à jour
       if (Object.keys(updates).length === 0) {
-        return res.status(400).send('no update fields sent');
+        return res.json({ error: 'no update field(s) sent', '_id': _id });
       }
+      
     
       try {
         const issue = await Issue.findByIdAndUpdate(
           _id,
-          { ...updates, updated_on: new Date() }, // Ajout de la date de mise à jour
+          { ...updates, updated_on: new Date() }, // Mets à jour la date
           { new: true }
         );
+        
     
         // Vérification si l'issue existe
         if (!issue) {
-          return res.status(404).send('no issue found');
+          return res.json({ result: 'successfully updated', '_id': _id });
+
         }
     
         res.json(issue); // Renvoi de l'issue mise à jour
@@ -96,17 +100,18 @@ module.exports = function (app) {
       const { _id } = req.body;
 
       if (!_id) {
-        return res.status(400).send('missing _id');
+        return res.json({ error: 'missing _id' });
       }
-
+      
       try {
         const issue = await Issue.findByIdAndDelete(_id);
         if (!issue) {
-          return res.status(404).send('no issue found');
+          return res.json({ error: 'could not delete', '_id': _id });
         }
-        res.send('deleted ' + _id);
+        res.json({ result: 'successfully deleted', '_id': _id });
       } catch (err) {
-        res.status(404).send(err);
+        res.json({ error: 'could not delete', '_id': _id });
       }
+      
     });
 };
