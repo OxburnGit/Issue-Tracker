@@ -4,12 +4,13 @@ const assert = chai.assert;
 const server = require('../server');
 
 chai.use(chaiHttp);
-/*
+
 suite('Functional Tests', function() {
   
   let project = 'apitest';
-  let testIssueId;
+  let testIssueId; // Stocke l'_id pour les tests de mise à jour et suppression
 
+  // POST Tests
   test('Create an issue with every field', function(done) {
     chai.request(server)
       .post('/api/issues/' + project)
@@ -23,7 +24,7 @@ suite('Functional Tests', function() {
       .end(function(err, res) {
         assert.equal(res.status, 200);
         assert.property(res.body, '_id');
-        testIssueId = res.body._id; // Save the issue ID for later tests
+        testIssueId = res.body._id; // Sauvegarde l'_id pour les tests suivants
         done();
       });
   });
@@ -32,8 +33,8 @@ suite('Functional Tests', function() {
     chai.request(server)
       .post('/api/issues/' + project)
       .send({
-        issue_title: 'Another Test Issue',
-        issue_text: 'This issue has only required fields.',
+        issue_title: 'Required Fields Only',
+        issue_text: 'This issue only has required fields.',
         created_by: 'Tester'
       })
       .end(function(err, res) {
@@ -48,14 +49,17 @@ suite('Functional Tests', function() {
       .post('/api/issues/' + project)
       .send({
         issue_title: '',
-        created_by: 'Tester'
+        issue_text: 'Missing fields test',
+        created_by: ''
       })
       .end(function(err, res) {
-        assert.equal(res.status, 400);
+        assert.equal(res.status, 200);
+        assert.equal(res.body.error, 'required field(s) missing');
         done();
       });
   });
 
+  // GET Tests
   test('View issues on a project', function(done) {
     chai.request(server)
       .get('/api/issues/' + project)
@@ -72,6 +76,8 @@ suite('Functional Tests', function() {
       .end(function(err, res) {
         assert.equal(res.status, 200);
         assert.isArray(res.body);
+        assert.property(res.body[0], 'open');
+        assert.equal(res.body[0].open, true);
         done();
       });
   });
@@ -82,17 +88,21 @@ suite('Functional Tests', function() {
       .end(function(err, res) {
         assert.equal(res.status, 200);
         assert.isArray(res.body);
+        assert.property(res.body[0], 'assigned_to');
+        assert.equal(res.body[0].assigned_to, 'Assignee');
         done();
       });
   });
 
+  // PUT Tests
   test('Update one field on an issue', function(done) {
     chai.request(server)
       .put('/api/issues/' + project)
       .send({ _id: testIssueId, issue_title: 'Updated Title' })
       .end(function(err, res) {
         assert.equal(res.status, 200);
-        assert.equal(res.body.issue_title, 'Updated Title');
+        assert.equal(res.body.result, 'successfully updated');
+        assert.equal(res.body._id, testIssueId);
         done();
       });
   });
@@ -103,7 +113,8 @@ suite('Functional Tests', function() {
       .send({ _id: testIssueId, issue_title: 'New Title', status_text: 'Resolved' })
       .end(function(err, res) {
         assert.equal(res.status, 200);
-        assert.equal(res.body.status_text, 'Resolved');
+        assert.equal(res.body.result, 'successfully updated');
+        assert.equal(res.body._id, testIssueId);
         done();
       });
   });
@@ -113,7 +124,8 @@ suite('Functional Tests', function() {
       .put('/api/issues/' + project)
       .send({ issue_title: 'No ID' })
       .end(function(err, res) {
-        assert.equal(res.status, 400);
+        assert.equal(res.status, 200);
+        assert.equal(res.body.error, 'missing _id');
         done();
       });
   });
@@ -123,7 +135,8 @@ suite('Functional Tests', function() {
       .put('/api/issues/' + project)
       .send({ _id: testIssueId })
       .end(function(err, res) {
-        assert.equal(res.status, 400);
+        assert.equal(res.status, 200);
+        assert.equal(res.body.error, 'no update field(s) sent');
         done();
       });
   });
@@ -133,18 +146,22 @@ suite('Functional Tests', function() {
       .put('/api/issues/' + project)
       .send({ _id: 'invalid_id', issue_title: 'Invalid ID' })
       .end(function(err, res) {
-        assert.equal(res.status, 404);
+        assert.equal(res.status, 200);
+        assert.equal(res.body.error, 'could not update');
+        assert.equal(res.body._id, 'invalid_id');
         done();
       });
   });
 
+  // DELETE Tests
   test('Delete an issue', function(done) {
     chai.request(server)
       .delete('/api/issues/' + project)
       .send({ _id: testIssueId })
       .end(function(err, res) {
         assert.equal(res.status, 200);
-        assert.equal(res.text, 'deleted ' + testIssueId);
+        assert.equal(res.body.result, 'successfully deleted');
+        assert.equal(res.body._id, testIssueId);
         done();
       });
   });
@@ -154,7 +171,9 @@ suite('Functional Tests', function() {
       .delete('/api/issues/' + project)
       .send({ _id: 'invalid_id' })
       .end(function(err, res) {
-        assert.equal(res.status, 404);
+        assert.equal(res.status, 200);
+        assert.equal(res.body.error, 'could not delete');
+        assert.equal(res.body._id, 'invalid_id');
         done();
       });
   });
@@ -164,9 +183,10 @@ suite('Functional Tests', function() {
       .delete('/api/issues/' + project)
       .send({})
       .end(function(err, res) {
-        assert.equal(res.status, 400);
+        assert.equal(res.status, 200);
+        assert.equal(res.body.error, 'missing _id');
         done();
       });
   });
 
-});*/
+});
