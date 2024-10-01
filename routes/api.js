@@ -18,16 +18,22 @@ module.exports = function (app) {
   
     .get(async function (req, res) {
       let project = req.params.project;
-      let filter = { project, ...req.query }; // Ajoute les filtres
+      let filter = { project };
+    
+      // Ajouter les filtres de req.query si présents
+      if (Object.keys(req.query).length > 0) {
+        filter = { ...filter, ...req.query };
+      }
+    
       try {
         const issues = await Issue.find(filter);
-        res.json(issues); // Renvoie les issues filtrées
+        res.json(issues); // Renvoie toutes les issues ou les issues filtrées
       } catch (err) {
-        res.status(500).send(err);
+        res.status(500).json({ error: 'could not retrieve issues' });
       }
     })
   
-    
+
     .post(async function (req, res) {
       try {
         const { issue_title, issue_text, created_by, assigned_to, status_text, project } = req.body;
@@ -54,45 +60,34 @@ module.exports = function (app) {
     
 
     .put(async function (req, res) {
-      let project = req.params.project;
       const { _id, ...updates } = req.body;
     
-      // Vérification de l'absence de l'_id
       if (!_id) {
         return res.json({ error: 'missing _id' });
       }
     
-      // Vérification de la validité de l'_id
-      if (!mongoose.Types.ObjectId.isValid(_id)) {
-        return res.status(404).send('invalid _id');
-      }
-    
-      // Vérification s'il y a des champs à mettre à jour
       if (Object.keys(updates).length === 0) {
         return res.json({ error: 'no update field(s) sent', '_id': _id });
       }
-      
     
       try {
         const issue = await Issue.findByIdAndUpdate(
           _id,
-          { ...updates, updated_on: new Date() }, // Mets à jour la date
+          { ...updates, updated_on: new Date() }, // Mets à jour `updated_on`
           { new: true }
         );
-        
     
-        // Vérification si l'issue existe
         if (!issue) {
-          return res.json({ result: 'successfully updated', '_id': _id });
-
+          return res.json({ error: 'could not update', '_id': _id });
         }
     
-        res.json(issue); // Renvoi de l'issue mise à jour
+        res.json({ result: 'successfully updated', '_id': _id });
       } catch (err) {
-        console.error('Error updating issue:', err);
-        res.status(500).send({ error: 'Failed to update issue' });
+        res.json({ error: 'could not update', '_id': _id });
       }
     })
+    
+
     
     
     .delete(async function (req, res) {
