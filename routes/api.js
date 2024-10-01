@@ -20,41 +20,41 @@ module.exports = function (app) {
       let project = req.params.project;
       let filter = { project };
     
-      // Ajouter les filtres de req.query si présents
       if (Object.keys(req.query).length > 0) {
         filter = { ...filter, ...req.query };
       }
     
       try {
-        const issues = await Issue.find(filter);
-        res.json(issues); // Renvoie toutes les issues ou les issues filtrées
+        const issues = await Issue.find(filter).select('-__v');
+        res.json(issues);
       } catch (err) {
         res.status(500).json({ error: 'could not retrieve issues' });
       }
-    })
-  
+    })    
+    
 
     .post(async function (req, res) {
+      const { issue_title, issue_text, created_by, assigned_to, status_text } = req.body;
+      const project = req.params.project; // Récupère le nom du projet depuis l'URL
+    
+      if (!issue_title || !issue_text || !created_by) {
+        return res.json({ error: 'required field(s) missing' });
+      }
+    
+      const newIssue = new Issue({
+        project, // Enregistre le projet dans l'issue
+        issue_title,
+        issue_text,
+        created_by,
+        assigned_to,
+        status_text,
+      });
+    
       try {
-        const { issue_title, issue_text, created_by, assigned_to, status_text, project } = req.body;
-    
-        if (!issue_title || !issue_text || !created_by) {
-          return res.json({ error: 'required field(s) missing' });
-        }        
-    
-        const newIssue = new Issue({
-          issue_title,
-          issue_text,
-          created_by,
-          assigned_to,
-          status_text,
-          project,
-        });
-    
         const savedIssue = await newIssue.save();
-        res.status(200).send(savedIssue);
+        res.json(savedIssue);
       } catch (error) {
-        res.status(500).send({ error: 'Internal Server Error' });
+        res.status(500).json({ error: 'Failed to save issue' });
       }
     })
     
@@ -87,7 +87,6 @@ module.exports = function (app) {
       }
     })
     
-
     
     
     .delete(async function (req, res) {
